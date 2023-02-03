@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ Convert audio sent by remote RC to virtual joystick.
 
 I use this script to convert the signal sent by my remote controller that have as audio output used to simulator
@@ -10,12 +11,13 @@ I use it to practice in the excellent RC Quadcopter Racing Simulator - https://f
 Thsi code is based on the work from https://github.com/nigelsim/ppmadapter, but as been substential modified, to be more reliable and don't consume much CPU
 """
 
+import cv2
 import pyaudio
 import wave
 import numpy as np
 from evdev import UInput, ecodes
 
-channel=[0,0,0,0,0,0]
+channel=[0,0,0,0,0,0,0]
 
 # Define virtual joystick
 mapping = {0: ecodes.ABS_X,
@@ -52,6 +54,61 @@ stream = portAudio.open(format=sample_format,
                 rate = fs,
                 frames_per_buffer = chunk,
                 input = True)
+
+# Try to guess the number os channels
+channels=0
+chooseChanel=[0,0,0,0,0,0,0]
+channelIndex=0
+chooseNegativeSamples=[]
+
+for loop in range(20):
+    data = np.array(wave.struct.unpack("%dh" % chunk, stream.read(chunk))) * np.blackman(chunk)
+    for sample in data:
+        if (sample>0):
+            if (last_sample>0):
+                positiveSample+=1
+            else:
+                if negativeSample>5:
+                    channelIndex+=1
+                negativeSample=0
+        else:
+            if (last_sample<0):
+                negativeSample+=1
+            else:
+                if (positiveSample>EndSignal):
+                   try:
+                       chooseChanel[channelIndex]+=1
+                   except:
+                       channelIndex=0
+                   channelIndex=0
+                positiveSample=0
+        last_sample=sample
+NumberOfChannels=chooseChanel.index(np.max(chooseChanel))-1
+print("Number of channels=",NumberOfChannels)
+
+# Try to gess the number os samples for intersignal negative value
+
+for loop in range(100):
+    data = np.array(wave.struct.unpack("%dh" % chunk, stream.read(chunk))) * np.blackman(chunk)
+    for sample in data:
+        if (sample>0):
+            if (last_sample>0):
+                positiveSample+=1
+            else:
+                if negativeSample>3:
+                    chooseNegativeSamples.append(negativeSample)
+                negativeSample=0
+        else:
+            if (last_sample<0):
+                negativeSample+=1
+            else:
+                if (positiveSample>300 and channelIndex==NumberOfChannels+1):
+                    channelIndex=0
+                positiveSample=0
+        last_sample=sample
+NegativeSamples=max(set(chooseNegativeSamples), key = chooseNegativeSamples.count)
+print("NegativeSamples=",NegativeSamples)
+
  
 while True:
     # Read chunk from audio
@@ -70,7 +127,7 @@ while True:
             if (last_sample<0):
                 negativeSample+=1
             else:
-                if (positiveSample>EndSignal and channelIndex==NumberOfChannels+1):   # Only write to virtual joystck is EndSignal was reached and the number of channels was reached (+1 because is end signal)
+                if (positiveSample>EndSignal and channelIndex==NumberOfChannels+1):   # Only write to virtual joystck if EndSignal was reached and the number of channels was reached (+1 because is end signal)
                     for n1 in range(0,4):
                         j.write(ecodes.EV_ABS, mapping[n1], channel[n1+1])
                         j.syn()
@@ -81,9 +138,9 @@ while True:
                     channelIndex=0
                 positiveSample=0
         last_sample=sample
- 
+
 # Stop and close the Stream and PyAudio
 stream.stop_stream()
 stream.close()
-p.terminate()
+portAudio.terminate()
  
