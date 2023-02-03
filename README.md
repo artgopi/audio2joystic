@@ -9,7 +9,7 @@ I just test it with my remote and with Linux.
 I use it to practice in the excellent RC Quadcopter Racing Simulator - https://fpv-freerider.itch.io/fpv-freerider
 
 Thsi code is based on the work from https://github.com/nigelsim/ppmadapter, but as been substential modified, to
- be more reliable and don't consume much CPU
+ be more reliable and reduce CPU usage.
  
 Using an oscilloscope I check that my controller output a signal simillar to:
 
