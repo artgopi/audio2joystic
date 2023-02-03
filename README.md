@@ -13,8 +13,10 @@ This code is based on the work from https://github.com/nigelsim/ppmadapter, but 
  
 Using an oscilloscope I check that my controller output a signal simillar to:
 
-```__    __    __    __    _____________________
-  |  |  |  |  |  |  |  |
-   --    --    --    --```
+```
+___  ___  ___  ___  _____________________
+  
+   __   __   __   __
+```
    
  Where the top space varies when the stick are moved.
